@@ -3,411 +3,264 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Offline X&O</title>
+<title>Pocket Games</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-  :root{
-    --ink:#0e1b1f;
-    --paper:#f3ede1;
-    --signal:#ff6a3d;
-    --signal-dim:#c44e2a;
-    --line:#0e1b1f33;
-    --good:#3d7a5c;
+  :root {
+    --ink: #0e1b1f;
+    --paper: #f3ede1;
+    --signal: #ff6a3d;
+    --signal-dim: rgba(255,106,61,0.12);
+    --good: #3d7a5c;
+    --muted: #8a9590;
+    --line: rgba(14,27,31,0.15);
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--ink);
-    color:var(--paper);
-    font-family:'Courier New', ui-monospace, SFMono-Regular, monospace;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:28px 18px 48px;
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Courier New', ui-monospace, monospace;
+    -webkit-font-smoothing: antialiased;
   }
-  .eyebrow{
-    letter-spacing:.22em;
-    font-size:11px;
-    text-transform:uppercase;
-    color:var(--signal);
-    margin-bottom:6px;
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 18px 52px;
+    min-height: 100dvh;
   }
-  h1{
-    font-family:Georgia, 'Times New Roman', serif;
-    font-weight:700;
-    font-size:30px;
-    margin:0 0 26px;
-    letter-spacing:-0.01em;
-  }
-  .card{
-    background:var(--paper);
-    color:var(--ink);
-    border-radius:2px;
-    width:100%;
-    max-width:420px;
-    padding:22px;
-    margin-bottom:18px;
-    box-shadow:0 0 0 1px var(--line);
-  }
-  .card h2{
-    font-family:Georgia, serif;
-    font-size:15px;
-    margin:0 0 12px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
-  .card h2 .num{
-    background:var(--ink);
-    color:var(--paper);
-    width:20px;height:20px;
-    border-radius:50%;
-    display:inline-flex;align-items:center;justify-content:center;
-    font-size:11px;
-  }
-  p.help{
-    font-size:13px;
-    line-height:1.5;
-    color:#3a3a36;
-    margin:0 0 14px;
-  }
-  button{
-    font-family:inherit;
-    font-size:14px;
-    background:var(--ink);
-    color:var(--paper);
-    border:none;
-    padding:11px 18px;
-    border-radius:2px;
-    cursor:pointer;
-    letter-spacing:.03em;
-  }
-  button:active{transform:translateY(1px);}
-  button.secondary{
-    background:transparent;
-    color:var(--ink);
-    box-shadow:inset 0 0 0 1px var(--ink);
-  }
-  textarea{
-    width:100%;
-    font-family:inherit;
-    font-size:11px;
-    padding:10px;
-    border:1px solid var(--line);
-    border-radius:2px;
-    resize:none;
-    background:#fff;
-    color:var(--ink);
-    margin-bottom:10px;
-  }
-  .row{display:flex;gap:8px;flex-wrap:wrap;}
-  .status{
-    font-size:12px;
-    letter-spacing:.04em;
-    margin-top:4px;
-  }
-  .status.connected{color:var(--good);}
-  .status.waiting{color:var(--signal-dim);}
-  #setup{width:100%;max-width:420px;}
-  #game{display:none;width:100%;max-width:420px;flex-direction:column;align-items:center;}
-  .turn-banner{
-    font-size:13px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    color:var(--paper);
-    margin-bottom:16px;
-    text-align:center;
-  }
-  .turn-banner span{color:var(--signal);}
-  .board{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:6px;
-    width:100%;
-    max-width:320px;
-    aspect-ratio:1;
-  }
-  .cell{
-    background:var(--paper);
-    border-radius:2px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:Georgia, serif;
-    font-size:54px;
-    color:var(--ink);
-    cursor:pointer;
-    user-select:none;
-  }
-  .cell.x{color:var(--signal);}
-  .cell.o{color:var(--good);}
-  .cell:empty:active{background:#e7e0d2;}
-  .result{
-    margin-top:18px;
-    font-size:15px;
-    text-align:center;
-    min-height:20px;
-  }
-  .footer-note{
-    margin-top:30px;
-    font-size:10.5px;
-    color:#8a958f;
-    text-align:center;
-    max-width:340px;
-    line-height:1.6;
-  }
-  .hide{display:none !important;}
+  .screen { display: none; width: 100%; max-width: 400px; flex-direction: column; align-items: center; }
+  .screen.active { display: flex; }
+  .eyebrow { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--signal); margin-bottom: 6px; text-align: center; }
+  h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 28px; text-align: center; }
+  h2 { font-family: Georgia, serif; font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  p.help { font-size: 12.5px; line-height: 1.55; color: #4a4a44; margin-bottom: 14px; }
+  .card { background: var(--paper); color: var(--ink); border-radius: 2px; padding: 20px; width: 100%; margin-bottom: 14px; }
+  button { font-family: inherit; font-size: 13px; border: none; border-radius: 2px; padding: 11px 18px; cursor: pointer; letter-spacing: .04em; transition: opacity .1s; }
+  button:active { opacity: .75; }
+  .btn-dark { background: var(--ink); color: var(--paper); }
+  .btn-outline { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .btn-full { width: 100%; margin-bottom: 8px; }
+  .btn-sm { font-size: 11px; padding: 8px 14px; }
+  .code-wrap { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 24px; text-align: center; margin-bottom: 14px; width: 100%; }
+  .code-label { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .code-digits { font-family: Georgia, serif; font-size: 56px; font-weight: 700; letter-spacing: .15em; color: var(--signal); line-height: 1; }
+  .code-note { font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .code-input-row { display: flex; gap: 8px; width: 100%; margin-bottom: 10px; }
+  .code-input-row input { flex: 1; font-family: Georgia, serif; font-size: 28px; letter-spacing: .18em; text-align: center; background: #fff; color: var(--ink); border: 1.5px solid var(--line); border-radius: 2px; padding: 10px 8px; -webkit-appearance: none; }
+  .code-input-row input::placeholder { color: #bbb; font-size: 20px; }
+  .status { font-size: 11.5px; letter-spacing: .04em; margin-top: 4px; color: var(--muted); }
+  .status.ok { color: var(--good); }
+  .status.err { color: #c44; }
+  .status.warn { color: var(--signal); }
+  @keyframes dots { 0%{content:''}25%{content:'.'}50%{content:'..'}75%,100%{content:'...'} }
+  .dot-pulse::after { content: ''; animation: dots 1.2s steps(4,end) infinite; }
+  .lobby-header { text-align: center; margin-bottom: 22px; width: 100%; }
+  .connected-tag { display: inline-block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; background: var(--signal-dim); color: var(--signal); padding: 3px 10px; border-radius: 99px; margin-bottom: 10px; }
+  .lobby-header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+  .game-card { background: var(--paper); color: var(--ink); border-radius: 2px; padding: 16px 14px; cursor: pointer; transition: transform .1s; }
+  .game-card:active { transform: scale(.96); }
+  .game-card .gicon { font-size: 30px; margin-bottom: 8px; line-height: 1; }
+  .game-card .gname { font-family: Georgia, serif; font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .game-card .gdesc { font-size: 10.5px; color: #6a6a62; }
+  #game-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; }
+  .game-topbar { display: flex; align-items: center; width: 100%; max-width: 400px; margin-bottom: 18px; }
+  .game-topbar .back-btn { background: transparent; color: var(--muted); font-size: 11px; padding: 6px 10px; border: 1px solid rgba(138,149,144,.3); border-radius: 2px; }
+  .game-title-bar { flex: 1; text-align: center; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  #dc-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: #c44; color: #fff; text-align: center; padding: 10px; font-size: 12px; letter-spacing: .05em; z-index: 999; }
 </style>
 </head>
 <body>
 
-  <div class="eyebrow">No Internet · No Server</div>
-  <h1>Offline X&amp;O</h1>
+<div id="dc-banner">Connection lost — reload to reconnect</div>
 
-  <div id="setup">
-
-    <div class="card">
-      <h2><span class="num">1</span>Pick a role</h2>
-      <p class="help">One phone is the <b>Host</b>, the other <b>Joins</b>. Doesn't matter who plays X or O &mdash; that's decided after you connect.</p>
-      <div class="row">
-        <button id="hostBtn">Host a game</button>
-        <button id="joinBtn" class="secondary">Join a game</button>
-      </div>
-    </div>
-
-    <div class="card hide" id="hostCard">
-      <h2><span class="num">2</span>Send this code</h2>
-      <p class="help">Copy this and send it to the other phone &mdash; AirDrop, Messages, however. It only works on the same WiFi network or hotspot.</p>
-      <textarea id="hostOfferOut" rows="4" readonly></textarea>
-      <button id="copyOffer" class="secondary">Copy code</button>
-      <h2 style="margin-top:18px;"><span class="num">3</span>Paste their reply</h2>
-      <p class="help">When they send a code back, paste it here.</p>
-      <textarea id="hostAnswerIn" rows="4" placeholder="Paste their reply code here"></textarea>
-      <button id="hostConnectBtn">Connect</button>
-      <div class="status waiting" id="hostStatus">Waiting for reply code&hellip;</div>
-    </div>
-
-    <div class="card hide" id="joinCard">
-      <h2><span class="num">2</span>Paste the host's code</h2>
-      <textarea id="joinOfferIn" rows="4" placeholder="Paste the code you received here"></textarea>
-      <button id="joinGenerateBtn">Generate reply code</button>
-      <h2 style="margin-top:18px;"><span class="num">3</span>Send this back</h2>
-      <p class="help">Send this reply code back to the host, the same way they sent you theirs.</p>
-      <textarea id="joinAnswerOut" rows="4" readonly></textarea>
-      <button id="copyAnswer" class="secondary">Copy code</button>
-      <div class="status waiting" id="joinStatus">Waiting to connect&hellip;</div>
-    </div>
-
+<!-- ROLE -->
+<div id="screen-role" class="screen active">
+  <div class="eyebrow">No internet needed after loading</div>
+  <h1>Pocket<br>Games</h1>
+  <div class="card">
+    <h2>Pick a role</h2>
+    <p class="help">One phone hosts and shares a 6-digit code. The other phone enters it to connect. Both phones need to be on the same WiFi or hotspot.</p>
+    <button class="btn-dark btn-full" onclick="startHost()">Host a game</button>
+    <button class="btn-outline btn-full" onclick="show('screen-join')">Join a game</button>
   </div>
+</div>
 
-  <div id="game">
-    <div class="turn-banner" id="turnBanner">You are <span id="mySymbol">&mdash;</span></div>
-    <div class="board" id="board"></div>
-    <div class="result" id="result"></div>
-    <button class="secondary hide" id="rematchBtn" style="margin-top:14px;">Play again</button>
+<!-- HOST -->
+<div id="screen-host" class="screen">
+  <div class="eyebrow">Hosting</div>
+  <h1>Share this<br>code</h1>
+  <div class="code-wrap">
+    <div class="code-label">Game code</div>
+    <div class="code-digits" id="host-code">···</div>
+    <div class="code-note">Tell the other player this number</div>
   </div>
+  <div class="card">
+    <div class="status warn dot-pulse" id="host-status">Waiting for other player</div>
+  </div>
+</div>
 
-  <div class="footer-note">
-    Connects phone-to-phone over local WiFi or a personal hotspot using WebRTC. No data leaves the local network, no account, no install.
+<!-- JOIN -->
+<div id="screen-join" class="screen">
+  <div class="eyebrow">Joining</div>
+  <h1>Enter the<br>host's code</h1>
+  <div class="card">
+    <div class="code-input-row">
+      <input type="number" id="join-input" placeholder="000000" inputmode="numeric" />
+      <button class="btn-dark" onclick="startJoin()">Go</button>
+    </div>
+    <div class="status" id="join-status"></div>
   </div>
+  <button class="btn-outline btn-sm" onclick="show('screen-role')" style="color:var(--paper);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.2);">← Back</button>
+</div>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen">
+  <div class="lobby-header">
+    <div class="connected-tag">Connected ✓</div>
+    <h1 style="margin-bottom:4px;">Pick a game</h1>
+    <p>Either player can choose</p>
+  </div>
+  <div class="game-grid" id="game-grid"></div>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div class="game-topbar">
+    <button class="back-btn" onclick="leaveGame()">← Lobby</button>
+    <div class="game-title-bar" id="active-game-title"></div>
+    <div style="width:64px"></div>
+  </div>
+  <div id="game-container"></div>
+</div>
 
 <script>
-(function(){
-  let pc, channel, isHost, mySymbol, board, myTurn, gameOver;
+// ── GAME REGISTRY ── add new games here ──
+const GAMES = [
+  { id: 'tictactoe', name: 'Tic Tac Toe',        icon: '✕',  desc: 'Classic 3×3 grid' },
+  { id: 'rps',       name: 'Rock Paper Scissors', icon: '✊', desc: 'Simultaneous reveal' },
+];
 
-  const setup = document.getElementById('setup');
-  const game = document.getElementById('game');
-  const hostCard = document.getElementById('hostCard');
-  const joinCard = document.getElementById('joinCard');
+let peer, conn, isHost;
+let currentGame = null;
+let launching = false;
 
-  document.getElementById('hostBtn').onclick = () => startHost();
-  document.getElementById('joinBtn').onclick = () => {
-    joinCard.classList.remove('hide');
-    document.getElementById('hostBtn').classList.add('hide');
-    document.getElementById('joinBtn').classList.add('hide');
-  };
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
 
-  function newPC(){
-    pc = new RTCPeerConnection({ iceServers: [] }); // local network only, no STUN needed
-    pc.onicecandidate = () => {}; // we wait for ICE gathering to complete instead, see waitForIce
-  }
+function setStatus(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'status' + (type ? ' ' + type : '');
+  if (type === 'warn') el.classList.add('dot-pulse');
+}
 
-  function waitForIce(pc){
-    return new Promise(resolve => {
-      if (pc.iceGatheringState === 'complete') return resolve();
-      pc.onicegatheringstatechange = () => {
-        if (pc.iceGatheringState === 'complete') resolve();
-      };
-    });
-  }
+// ── HOST ──
+function startHost() {
+  isHost = true;
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  peer = new Peer('pocketgames-' + code);
+  peer.on('open', () => {
+    show('screen-host');
+    document.getElementById('host-code').textContent = code.slice(0,3) + ' ' + code.slice(3);
+  });
+  peer.on('connection', c => { conn = c; setupConn(); });
+  peer.on('error', err => {
+    if (err.type === 'unavailable-id') { peer.destroy(); startHost(); }
+    else setStatus('host-status', 'Error: ' + err.type, 'err');
+  });
+}
 
-  function setupChannelEvents(){
-    channel.onopen = () => {
-      document.getElementById('hostStatus').textContent = 'Connected';
-      document.getElementById('hostStatus').className = 'status connected';
-      document.getElementById('joinStatus').textContent = 'Connected';
-      document.getElementById('joinStatus').className = 'status connected';
-      startGame();
+// ── JOIN ──
+function startJoin() {
+  const raw = document.getElementById('join-input').value.replace(/\D/g,'').trim();
+  if (raw.length !== 6) { setStatus('join-status','Enter the full 6-digit code','err'); return; }
+  isHost = false;
+  setStatus('join-status','Connecting…','warn');
+  peer = new Peer();
+  peer.on('open', () => {
+    conn = peer.connect('pocketgames-' + raw, { reliable: true });
+    setupConn();
+  });
+  peer.on('error', () => setStatus('join-status','Could not connect — check the code and network','err'));
+}
+
+// ── CONNECTION ──
+function setupConn() {
+  conn.on('open', () => {
+    setStatus('host-status','Connected ✓','ok');
+    buildLobby();
+    show('screen-lobby');
+  });
+  conn.on('data', msg => {
+    if (msg.type === 'launch-game' && !launching) {
+      launching = true; launchGame(msg.game);
+    } else if (msg.type === 'return-lobby') {
+      doReturnLobby();
+    } else if (msg.type === 'game-msg' && currentGame) {
+      currentGame.receive(msg.payload);
+    }
+  });
+  conn.on('close', () => document.getElementById('dc-banner').style.display = 'block');
+  conn.on('error', () => document.getElementById('dc-banner').style.display = 'block');
+}
+
+function send(data) { if (conn && conn.open) conn.send(data); }
+
+// ── LOBBY ──
+function buildLobby() {
+  const grid = document.getElementById('game-grid');
+  grid.innerHTML = '';
+  GAMES.forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.innerHTML = `<div class="gicon">${g.icon}</div><div class="gname">${g.name}</div><div class="gdesc">${g.desc}</div>`;
+    card.onclick = () => {
+      if (launching) return;
+      launching = true;
+      send({ type: 'launch-game', game: g.id });
+      launchGame(g.id);
     };
-    channel.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'move') applyRemoteMove(msg.index);
-      if (msg.type === 'reset') resetBoardLocal(false);
-    };
+    grid.appendChild(card);
+  });
+}
+
+// ── LAUNCH GAME ──
+function launchGame(gameId) {
+  const meta = GAMES.find(g => g.id === gameId);
+  document.getElementById('active-game-title').textContent = meta ? meta.name : gameId;
+  show('screen-game');
+  const container = document.getElementById('game-container');
+  container.innerHTML = '';
+
+  function init() {
+    currentGame = window.GameModules[gameId].init(
+      container,
+      payload => send({ type: 'game-msg', payload }),
+      isHost
+    );
   }
 
-  async function startHost(){
-    isHost = true;
-    mySymbol = 'X';
-    hostCard.classList.remove('hide');
-    document.getElementById('hostBtn').classList.add('hide');
-    document.getElementById('joinBtn').classList.add('hide');
+  if (window.GameModules && window.GameModules[gameId]) { init(); return; }
+  const s = document.createElement('script');
+  s.src = 'games/' + gameId + '.js';
+  s.onload = init;
+  s.onerror = () => { container.innerHTML = '<p style="color:var(--signal);padding:24px;text-align:center;">Could not load game file.</p>'; };
+  document.head.appendChild(s);
+}
 
-    newPC();
-    channel = pc.createDataChannel('game');
-    setupChannelEvents();
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await waitForIce(pc);
-    document.getElementById('hostOfferOut').value = btoa(JSON.stringify(pc.localDescription));
-  }
-
-  document.getElementById('copyOffer').onclick = () => {
-    const ta = document.getElementById('hostOfferOut');
-    ta.select(); document.execCommand('copy');
-  };
-  document.getElementById('copyAnswer').onclick = () => {
-    const ta = document.getElementById('joinAnswerOut');
-    ta.select(); document.execCommand('copy');
-  };
-
-  document.getElementById('hostConnectBtn').onclick = async () => {
-    try{
-      const raw = document.getElementById('hostAnswerIn').value.trim();
-      const answer = JSON.parse(atob(raw));
-      await pc.setRemoteDescription(answer);
-      document.getElementById('hostStatus').textContent = 'Connecting\u2026';
-    }catch(e){
-      document.getElementById('hostStatus').textContent = 'That code didn\u2019t look right \u2014 check it and try again';
-    }
-  };
-
-  document.getElementById('joinGenerateBtn').onclick = async () => {
-    try{
-      isHost = false;
-      mySymbol = 'O';
-      const raw = document.getElementById('joinOfferIn').value.trim();
-      const offer = JSON.parse(atob(raw));
-
-      newPC();
-      pc.ondatachannel = (e) => {
-        channel = e.channel;
-        setupChannelEvents();
-      };
-
-      await pc.setRemoteDescription(offer);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      await waitForIce(pc);
-      document.getElementById('joinAnswerOut').value = btoa(JSON.stringify(pc.localDescription));
-      document.getElementById('joinStatus').textContent = 'Send the reply code back, then wait\u2026';
-    }catch(e){
-      document.getElementById('joinStatus').textContent = 'That code didn\u2019t look right \u2014 check it and try again';
-    }
-  };
-
-  // ---- game logic ----
-  function startGame(){
-    setup.classList.add('hide');
-    game.style.display = 'flex';
-    document.getElementById('mySymbol').textContent = mySymbol;
-    resetBoardLocal(false);
-  }
-
-  function resetBoardLocal(broadcast){
-    board = Array(9).fill(null);
-    gameOver = false;
-    myTurn = isHost; // X (host) always starts
-    document.getElementById('result').textContent = '';
-    document.getElementById('rematchBtn').classList.add('hide');
-    renderBoard();
-    updateBanner();
-    if (broadcast && channel && channel.readyState === 'open'){
-      channel.send(JSON.stringify({type:'reset'}));
-    }
-  }
-
-  function renderBoard(){
-    const b = document.getElementById('board');
-    b.innerHTML = '';
-    board.forEach((val, i) => {
-      const cell = document.createElement('div');
-      cell.className = 'cell' + (val ? ' ' + val.toLowerCase() : '');
-      cell.textContent = val || '';
-      cell.onclick = () => handleCellClick(i);
-      b.appendChild(cell);
-    });
-  }
-
-  function updateBanner(){
-    const banner = document.getElementById('turnBanner');
-    if (gameOver) return;
-    banner.innerHTML = myTurn
-      ? 'Your move &mdash; you are <span>' + mySymbol + '</span>'
-      : 'Waiting for opponent\u2026';
-  }
-
-  function handleCellClick(i){
-    if (gameOver || !myTurn || board[i]) return;
-    board[i] = mySymbol;
-    myTurn = false;
-    renderBoard();
-    updateBanner();
-    channel.send(JSON.stringify({type:'move', index:i}));
-    checkResult(mySymbol);
-  }
-
-  function applyRemoteMove(i){
-    if (gameOver || board[i]) return;
-    const theirSymbol = mySymbol === 'X' ? 'O' : 'X';
-    board[i] = theirSymbol;
-    myTurn = true;
-    renderBoard();
-    updateBanner();
-    checkResult(theirSymbol);
-  }
-
-  const LINES = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
-
-  function checkResult(lastSymbol){
-    for (const line of LINES){
-      const [a,b,c] = line;
-      if (board[a] && board[a]===board[b] && board[b]===board[c]){
-        gameOver = true;
-        const won = board[a] === mySymbol;
-        document.getElementById('result').textContent = won ? 'You win' : 'They win';
-        document.getElementById('rematchBtn').classList.remove('hide');
-        return;
-      }
-    }
-    if (board.every(v => v)){
-      gameOver = true;
-      document.getElementById('result').textContent = 'Draw';
-      document.getElementById('rematchBtn').classList.remove('hide');
-    }
-  }
-
-  document.getElementById('rematchBtn').onclick = () => {
-    isHost = !isHost; // alternate who starts
-    resetBoardLocal(true);
-  };
-
-})();
+// ── RETURN TO LOBBY ──
+function leaveGame() { send({ type:'return-lobby' }); doReturnLobby(); }
+function doReturnLobby() {
+  if (currentGame) { currentGame.cleanup(); currentGame = null; }
+  launching = false;
+  show('screen-lobby');
+}
 </script>
 </body>
 </html>
