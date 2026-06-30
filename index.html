@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Offline X&O</title>
+<style>
+  :root{
+    --ink:#0e1b1f;
+    --paper:#f3ede1;
+    --signal:#ff6a3d;
+    --signal-dim:#c44e2a;
+    --line:#0e1b1f33;
+    --good:#3d7a5c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Courier New', ui-monospace, SFMono-Regular, monospace;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:28px 18px 48px;
+  }
+  .eyebrow{
+    letter-spacing:.22em;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--signal);
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:Georgia, 'Times New Roman', serif;
+    font-weight:700;
+    font-size:30px;
+    margin:0 0 26px;
+    letter-spacing:-0.01em;
+  }
+  .card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:2px;
+    width:100%;
+    max-width:420px;
+    padding:22px;
+    margin-bottom:18px;
+    box-shadow:0 0 0 1px var(--line);
+  }
+  .card h2{
+    font-family:Georgia, serif;
+    font-size:15px;
+    margin:0 0 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2 .num{
+    background:var(--ink);
+    color:var(--paper);
+    width:20px;height:20px;
+    border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px;
+  }
+  p.help{
+    font-size:13px;
+    line-height:1.5;
+    color:#3a3a36;
+    margin:0 0 14px;
+  }
+  button{
+    font-family:inherit;
+    font-size:14px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:11px 18px;
+    border-radius:2px;
+    cursor:pointer;
+    letter-spacing:.03em;
+  }
+  button:active{transform:translateY(1px);}
+  button.secondary{
+    background:transparent;
+    color:var(--ink);
+    box-shadow:inset 0 0 0 1px var(--ink);
+  }
+  textarea{
+    width:100%;
+    font-family:inherit;
+    font-size:11px;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    resize:none;
+    background:#fff;
+    color:var(--ink);
+    margin-bottom:10px;
+  }
+  .row{display:flex;gap:8px;flex-wrap:wrap;}
+  .status{
+    font-size:12px;
+    letter-spacing:.04em;
+    margin-top:4px;
+  }
+  .status.connected{color:var(--good);}
+  .status.waiting{color:var(--signal-dim);}
+  #setup{width:100%;max-width:420px;}
+  #game{display:none;width:100%;max-width:420px;flex-direction:column;align-items:center;}
+  .turn-banner{
+    font-size:13px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--paper);
+    margin-bottom:16px;
+    text-align:center;
+  }
+  .turn-banner span{color:var(--signal);}
+  .board{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    width:100%;
+    max-width:320px;
+    aspect-ratio:1;
+  }
+  .cell{
+    background:var(--paper);
+    border-radius:2px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:Georgia, serif;
+    font-size:54px;
+    color:var(--ink);
+    cursor:pointer;
+    user-select:none;
+  }
+  .cell.x{color:var(--signal);}
+  .cell.o{color:var(--good);}
+  .cell:empty:active{background:#e7e0d2;}
+  .result{
+    margin-top:18px;
+    font-size:15px;
+    text-align:center;
+    min-height:20px;
+  }
+  .footer-note{
+    margin-top:30px;
+    font-size:10.5px;
+    color:#8a958f;
+    text-align:center;
+    max-width:340px;
+    line-height:1.6;
+  }
+  .hide{display:none !important;}
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">No Internet · No Server</div>
+  <h1>Offline X&amp;O</h1>
+
+  <div id="setup">
+
+    <div class="card">
+      <h2><span class="num">1</span>Pick a role</h2>
+      <p class="help">One phone is the <b>Host</b>, the other <b>Joins</b>. Doesn't matter who plays X or O &mdash; that's decided after you connect.</p>
+      <div class="row">
+        <button id="hostBtn">Host a game</button>
+        <button id="joinBtn" class="secondary">Join a game</button>
+      </div>
+    </div>
+
+    <div class="card hide" id="hostCard">
+      <h2><span class="num">2</span>Send this code</h2>
+      <p class="help">Copy this and send it to the other phone &mdash; AirDrop, Messages, however. It only works on the same WiFi network or hotspot.</p>
+      <textarea id="hostOfferOut" rows="4" readonly></textarea>
+      <button id="copyOffer" class="secondary">Copy code</button>
+      <h2 style="margin-top:18px;"><span class="num">3</span>Paste their reply</h2>
+      <p class="help">When they send a code back, paste it here.</p>
+      <textarea id="hostAnswerIn" rows="4" placeholder="Paste their reply code here"></textarea>
+      <button id="hostConnectBtn">Connect</button>
+      <div class="status waiting" id="hostStatus">Waiting for reply code&hellip;</div>
+    </div>
+
+    <div class="card hide" id="joinCard">
+      <h2><span class="num">2</span>Paste the host's code</h2>
+      <textarea id="joinOfferIn" rows="4" placeholder="Paste the code you received here"></textarea>
+      <button id="joinGenerateBtn">Generate reply code</button>
+      <h2 style="margin-top:18px;"><span class="num">3</span>Send this back</h2>
+      <p class="help">Send this reply code back to the host, the same way they sent you theirs.</p>
+      <textarea id="joinAnswerOut" rows="4" readonly></textarea>
+      <button id="copyAnswer" class="secondary">Copy code</button>
+      <div class="status waiting" id="joinStatus">Waiting to connect&hellip;</div>
+    </div>
+
+  </div>
+
+  <div id="game">
+    <div class="turn-banner" id="turnBanner">You are <span id="mySymbol">&mdash;</span></div>
+    <div class="board" id="board"></div>
+    <div class="result" id="result"></div>
+    <button class="secondary hide" id="rematchBtn" style="margin-top:14px;">Play again</button>
+  </div>
+
+  <div class="footer-note">
+    Connects phone-to-phone over local WiFi or a personal hotspot using WebRTC. No data leaves the local network, no account, no install.
+  </div>
+
+<script>
+(function(){
+  let pc, channel, isHost, mySymbol, board, myTurn, gameOver;
+
+  const setup = document.getElementById('setup');
+  const game = document.getElementById('game');
+  const hostCard = document.getElementById('hostCard');
+  const joinCard = document.getElementById('joinCard');
+
+  document.getElementById('hostBtn').onclick = () => startHost();
+  document.getElementById('joinBtn').onclick = () => {
+    joinCard.classList.remove('hide');
+    document.getElementById('hostBtn').classList.add('hide');
+    document.getElementById('joinBtn').classList.add('hide');
+  };
+
+  function newPC(){
+    pc = new RTCPeerConnection({ iceServers: [] }); // local network only, no STUN needed
+    pc.onicecandidate = () => {}; // we wait for ICE gathering to complete instead, see waitForIce
+  }
+
+  function waitForIce(pc){
+    return new Promise(resolve => {
+      if (pc.iceGatheringState === 'complete') return resolve();
+      pc.onicegatheringstatechange = () => {
+        if (pc.iceGatheringState === 'complete') resolve();
+      };
+    });
+  }
+
+  function setupChannelEvents(){
+    channel.onopen = () => {
+      document.getElementById('hostStatus').textContent = 'Connected';
+      document.getElementById('hostStatus').className = 'status connected';
+      document.getElementById('joinStatus').textContent = 'Connected';
+      document.getElementById('joinStatus').className = 'status connected';
+      startGame();
+    };
+    channel.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'move') applyRemoteMove(msg.index);
+      if (msg.type === 'reset') resetBoardLocal(false);
+    };
+  }
+
+  async function startHost(){
+    isHost = true;
+    mySymbol = 'X';
+    hostCard.classList.remove('hide');
+    document.getElementById('hostBtn').classList.add('hide');
+    document.getElementById('joinBtn').classList.add('hide');
+
+    newPC();
+    channel = pc.createDataChannel('game');
+    setupChannelEvents();
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await waitForIce(pc);
+    document.getElementById('hostOfferOut').value = btoa(JSON.stringify(pc.localDescription));
+  }
+
+  document.getElementById('copyOffer').onclick = () => {
+    const ta = document.getElementById('hostOfferOut');
+    ta.select(); document.execCommand('copy');
+  };
+  document.getElementById('copyAnswer').onclick = () => {
+    const ta = document.getElementById('joinAnswerOut');
+    ta.select(); document.execCommand('copy');
+  };
+
+  document.getElementById('hostConnectBtn').onclick = async () => {
+    try{
+      const raw = document.getElementById('hostAnswerIn').value.trim();
+      const answer = JSON.parse(atob(raw));
+      await pc.setRemoteDescription(answer);
+      document.getElementById('hostStatus').textContent = 'Connecting\u2026';
+    }catch(e){
+      document.getElementById('hostStatus').textContent = 'That code didn\u2019t look right \u2014 check it and try again';
+    }
+  };
+
+  document.getElementById('joinGenerateBtn').onclick = async () => {
+    try{
+      isHost = false;
+      mySymbol = 'O';
+      const raw = document.getElementById('joinOfferIn').value.trim();
+      const offer = JSON.parse(atob(raw));
+
+      newPC();
+      pc.ondatachannel = (e) => {
+        channel = e.channel;
+        setupChannelEvents();
+      };
+
+      await pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await waitForIce(pc);
+      document.getElementById('joinAnswerOut').value = btoa(JSON.stringify(pc.localDescription));
+      document.getElementById('joinStatus').textContent = 'Send the reply code back, then wait\u2026';
+    }catch(e){
+      document.getElementById('joinStatus').textContent = 'That code didn\u2019t look right \u2014 check it and try again';
+    }
+  };
+
+  // ---- game logic ----
+  function startGame(){
+    setup.classList.add('hide');
+    game.style.display = 'flex';
+    document.getElementById('mySymbol').textContent = mySymbol;
+    resetBoardLocal(false);
+  }
+
+  function resetBoardLocal(broadcast){
+    board = Array(9).fill(null);
+    gameOver = false;
+    myTurn = isHost; // X (host) always starts
+    document.getElementById('result').textContent = '';
+    document.getElementById('rematchBtn').classList.add('hide');
+    renderBoard();
+    updateBanner();
+    if (broadcast && channel && channel.readyState === 'open'){
+      channel.send(JSON.stringify({type:'reset'}));
+    }
+  }
+
+  function renderBoard(){
+    const b = document.getElementById('board');
+    b.innerHTML = '';
+    board.forEach((val, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (val ? ' ' + val.toLowerCase() : '');
+      cell.textContent = val || '';
+      cell.onclick = () => handleCellClick(i);
+      b.appendChild(cell);
+    });
+  }
+
+  function updateBanner(){
+    const banner = document.getElementById('turnBanner');
+    if (gameOver) return;
+    banner.innerHTML = myTurn
+      ? 'Your move &mdash; you are <span>' + mySymbol + '</span>'
+      : 'Waiting for opponent\u2026';
+  }
+
+  function handleCellClick(i){
+    if (gameOver || !myTurn || board[i]) return;
+    board[i] = mySymbol;
+    myTurn = false;
+    renderBoard();
+    updateBanner();
+    channel.send(JSON.stringify({type:'move', index:i}));
+    checkResult(mySymbol);
+  }
+
+  function applyRemoteMove(i){
+    if (gameOver || board[i]) return;
+    const theirSymbol = mySymbol === 'X' ? 'O' : 'X';
+    board[i] = theirSymbol;
+    myTurn = true;
+    renderBoard();
+    updateBanner();
+    checkResult(theirSymbol);
+  }
+
+  const LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function checkResult(lastSymbol){
+    for (const line of LINES){
+      const [a,b,c] = line;
+      if (board[a] && board[a]===board[b] && board[b]===board[c]){
+        gameOver = true;
+        const won = board[a] === mySymbol;
+        document.getElementById('result').textContent = won ? 'You win' : 'They win';
+        document.getElementById('rematchBtn').classList.remove('hide');
+        return;
+      }
+    }
+    if (board.every(v => v)){
+      gameOver = true;
+      document.getElementById('result').textContent = 'Draw';
+      document.getElementById('rematchBtn').classList.remove('hide');
+    }
+  }
+
+  document.getElementById('rematchBtn').onclick = () => {
+    isHost = !isHost; // alternate who starts
+    resetBoardLocal(true);
+  };
+
+})();
+</script>
+</body>
+</html>
